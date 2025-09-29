@@ -1,7 +1,7 @@
 """
 Database connection management
 Handles connection pooling and basic operations
-FIXED: Better connection persistence
+FIXED: Better connection persistence and case-insensitive column names
 """
 
 import pyodbc
@@ -103,7 +103,7 @@ class DatabaseConnection:
     def execute_query(self, query, params=None):
         """
         Execute a query and return results
-        For SELECT queries, returns list of dictionaries
+        For SELECT queries, returns list of dictionaries with case-insensitive keys
         For INSERT/UPDATE/DELETE, returns True/False
         """
         # Ensure we have a connection
@@ -137,7 +137,11 @@ class DatabaseConnection:
                 columns = [column[0] for column in self.cursor.description] if self.cursor.description else []
                 results = []
                 for row in self.cursor.fetchall():
-                    results.append(dict(zip(columns, row)))
+                    # Create case-insensitive dictionary
+                    row_dict = CaseInsensitiveDict()
+                    for i, col in enumerate(columns):
+                        row_dict[col] = row[i]
+                    results.append(row_dict)
                 return results
             else:
                 # For INSERT, UPDATE, DELETE
@@ -228,6 +232,63 @@ class DatabaseConnection:
             print(f"Error in connection context manager: {str(e)}")
             yield self
         # Don't disconnect when leaving context to maintain persistence
+
+
+class CaseInsensitiveDict(dict):
+    """
+    A dictionary that allows case-insensitive key access
+    while preserving the original key casing
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lower_keys = {}
+        for key in list(self.keys()):
+            self._lower_keys[key.lower() if isinstance(key, str) else key] = key
+    
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            # Try original key first
+            if key in self.keys():
+                return super().__getitem__(key)
+            # Try lowercase version
+            lower_key = key.lower()
+            if lower_key in self._lower_keys:
+                return super().__getitem__(self._lower_keys[lower_key])
+            # Try uppercase version
+            upper_key = key.upper()
+            for k in self.keys():
+                if isinstance(k, str) and k.upper() == upper_key:
+                    return super().__getitem__(k)
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        if isinstance(key, str):
+            self._lower_keys[key.lower()] = key
+        super().__setitem__(key, value)
+    
+    def __contains__(self, key):
+        if isinstance(key, str):
+            return key in self.keys() or key.lower() in self._lower_keys or key.upper() in [k.upper() for k in self.keys() if isinstance(k, str)]
+        return super().__contains__(key)
+    
+    def get(self, key, default=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
+    
+    def __delitem__(self, key):
+        if isinstance(key, str):
+            lower_key = key.lower()
+            if lower_key in self._lower_keys:
+                actual_key = self._lower_keys[lower_key]
+                del self._lower_keys[lower_key]
+                super().__delitem__(actual_key)
+            else:
+                super().__delitem__(key)
+        else:
+            super().__delitem__(key)
+
 
 # Global instance (singleton pattern)
 _db_instance = None

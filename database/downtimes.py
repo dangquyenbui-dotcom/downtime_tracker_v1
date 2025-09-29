@@ -1,7 +1,7 @@
-# database/downtimes.py - Complete file with edit functionality
+# database/downtimes.py - Complete file with edit functionality and shared viewing
 
 """
-Downtimes database operations - COMPLETE WITH EDIT/DELETE
+Downtimes database operations - COMPLETE WITH EDIT/DELETE AND SHARED VIEWING
 Enhanced for production downtime tracking
 """
 
@@ -371,3 +371,37 @@ class DowntimesDB:
             """
             
             return conn.execute_query(query, (username, line_id))
+    
+    def get_all_entries_for_line_today(self, line_id):
+        """Get ALL entries for a specific line today (from all users)"""
+        with self.db.get_connection() as conn:
+            query = """
+                SELECT 
+                    d.downtime_id,
+                    d.line_id,
+                    d.category_id,
+                    d.start_time,
+                    d.end_time,
+                    d.duration_minutes,
+                    d.crew_size,
+                    d.reason_notes,
+                    d.entered_by,
+                    d.shift_id,
+                    pl.line_name,
+                    f.facility_name,
+                    f.facility_id,
+                    dc.category_name,
+                    dc.parent_id,
+                    s.shift_name
+                FROM Downtimes d
+                INNER JOIN ProductionLines pl ON d.line_id = pl.line_id
+                INNER JOIN Facilities f ON pl.facility_id = f.facility_id
+                INNER JOIN DowntimeCategories dc ON d.category_id = dc.category_id
+                LEFT JOIN Shifts s ON d.shift_id = s.shift_id
+                WHERE d.line_id = ?
+                AND CAST(d.start_time AS DATE) = CAST(GETDATE() AS DATE)
+                AND d.is_deleted = 0
+                ORDER BY d.start_time DESC
+            """
+            
+            return conn.execute_query(query, (line_id,))

@@ -519,3 +519,257 @@ For issues or questions:
 
 ---
 *Downtime Tracker v1.3.4 - Production-ready manufacturing downtime tracking system*
+
+Here's a new README section documenting the recent improvements and fixes:
+
+```markdown
+
+## Recent Updates & Fixes
+
+### Version 1.3.5 (Latest) - Enhanced Collaboration & Database Compatibility
+Released: September 2025
+
+#### 🔧 Critical Fixes
+
+##### Database Case-Insensitive Column Access
+**Problem Solved**: SQL Server column name case sensitivity causing `KeyError: 'COLUMN_NAME'` errors
+
+**Solution Implemented**: 
+- Added `CaseInsensitiveDict` class to `database/connection.py`
+- Database results now accept column names in any case (COLUMN_NAME, column_name, Column_Name)
+- No changes required to existing database modules
+- Improved compatibility across different SQL Server configurations
+
+**Technical Details**:
+```python
+# Now all these work regardless of SQL Server's column casing:
+result['COLUMN_NAME']  # Original case
+result['column_name']  # Lowercase
+result['Column_Name']  # Mixed case
+```
+
+#### ✨ New Features
+
+##### Shared Downtime Visibility
+**Enhancement**: All users can now see downtime entries from other users for the same production line
+
+**Key Features**:
+- **Collaborative Viewing**: View all entries for a selected facility/production line for the current day
+- **User Attribution**: Each entry displays who submitted it (👤 username indicator)
+- **Edit Protection**: Users can only edit/delete their own entries
+- **Visual Distinction**: Other users' entries have a subtle different appearance for clarity
+- **Real-time Collaboration**: Multiple operators can track downtime for the same line simultaneously
+
+**Benefits**:
+- Better shift handover visibility
+- Complete downtime picture for supervisors
+- Reduced duplicate entries
+- Enhanced team coordination
+
+**Implementation**:
+- New database method: `get_all_entries_for_line_today()` in `database/downtimes.py`
+- Updated route: `/downtime/api/today-entries/<line_id>` returns all entries with ownership flags
+- Enhanced UI: Shows entry owner and restricts edit/delete to entry creator
+
+#### 📋 Technical Improvements
+
+##### Database Connection Enhancements
+- **Persistent Connections**: Better connection pooling with auto-reconnect
+- **Case-Insensitive Queries**: Robust handling of SQL Server metadata
+- **Error Recovery**: Improved error handling and automatic retry logic
+
+##### UI/UX Improvements
+- **Entry Attribution**: Clear display of who entered each downtime record
+- **Ownership Indicators**: Visual badges showing "your entries" vs "team entries"
+- **Edit Restrictions**: Smart UI that only shows edit/delete buttons for user's own entries
+
+## Migration Guide
+
+### Upgrading from v1.3.4 to v1.3.5
+
+1. **Update Database Connection Module**:
+   ```bash
+   # Replace database/connection.py with the new version
+   # This includes CaseInsensitiveDict support
+   ```
+
+2. **Update Downtimes Module**:
+   ```bash
+   # Update database/downtimes.py
+   # Adds get_all_entries_for_line_today() method
+   ```
+
+3. **Update Routes**:
+   ```bash
+   # Update routes/downtime.py
+   # Modified get_today_entries() to show all users' entries
+   ```
+
+4. **No Database Schema Changes Required**:
+   - All changes are code-level only
+   - Existing database structure remains unchanged
+   - Backward compatible with existing data
+
+5. **Restart Application**:
+   ```bash
+   python app.py
+   # or for production
+   python run_production.py
+   ```
+
+## Usage Guide
+
+### Viewing Shared Entries
+
+1. **Navigate to Downtime Entry** (`/downtime`)
+2. **Select Facility and Production Line**
+3. **View "All Today's Entries for This Line"** section:
+   - Shows all entries from all users for today
+   - Each entry displays the username of who submitted it
+   - Your entries have Edit/Delete buttons
+   - Other users' entries are read-only with visual distinction
+
+### Understanding Entry Ownership
+
+- **Your Entries**: 
+  - Full color background
+  - Edit ✏️ and Delete 🗑️ buttons visible
+  - Can be modified or removed
+
+- **Team Entries**:
+  - Slightly muted appearance
+  - Shows 👤 username badge
+  - Read-only (no action buttons)
+  - Provides context for total line downtime
+
+## Troubleshooting Guide
+
+### Common Issues & Solutions
+
+#### Issue: "KeyError: 'COLUMN_NAME'" Error
+**Solution**: Update `database/connection.py` with the new CaseInsensitiveDict implementation
+
+#### Issue: Can't See Other Users' Entries
+**Solution**: 
+1. Verify you're using the updated `database/downtimes.py` with `get_all_entries_for_line_today()` method
+2. Check that the route `/downtime/api/today-entries/` is using the new method
+3. Clear browser cache and refresh the page
+
+#### Issue: Can Edit Other Users' Entries
+**Solution**: Ensure the frontend JavaScript checks `entry.is_own_entry` flag before showing edit buttons
+
+#### Issue: Database Connection Drops
+**Solution**: The new connection.py includes auto-reconnect logic, but check:
+1. SQL Server is running and accessible
+2. Network connectivity is stable
+3. Database credentials in .env are correct
+
+## Performance Considerations
+
+### Optimizations in v1.3.5
+
+- **Connection Pooling**: Persistent database connections reduce overhead
+- **Efficient Queries**: Single query retrieves all entries for a line
+- **Client-Side Filtering**: Visual distinctions handled in browser
+- **Minimal Network Traffic**: Only necessary data transmitted
+
+### Scaling Recommendations
+
+For high-traffic installations:
+1. **Database Indexing**: Ensure indexes on:
+   ```sql
+   CREATE INDEX IX_Downtimes_LineDate ON Downtimes(line_id, start_time);
+   CREATE INDEX IX_Downtimes_EnteredBy ON Downtimes(entered_by);
+   ```
+
+2. **Session Management**: Configure appropriate session timeout in .env:
+   ```env
+   SESSION_HOURS=8  # Adjust based on shift length
+   ```
+
+3. **Production Server**: Use Waitress for better concurrency:
+   ```bash
+   python run_production.py  # Handles multiple simultaneous users better
+   ```
+
+## Security Notes
+
+### v1.3.5 Security Features
+
+- **Entry Ownership Protection**: Server-side validation prevents editing others' entries
+- **Session Validation**: Each request validates user session
+- **SQL Injection Prevention**: All queries use parameterized statements
+- **XSS Protection**: User input properly escaped in templates
+
+### Best Practices
+
+1. **Regular Audits**: Check the audit log regularly for unusual activity
+2. **User Training**: Ensure users understand they can see but not edit others' entries
+3. **Backup Strategy**: Regular database backups recommended before shifts
+4. **Access Control**: Maintain proper AD group membership
+
+## API Reference Update
+
+### New/Modified Endpoints
+
+#### GET `/downtime/api/today-entries/<line_id>`
+Returns all downtime entries for a specific production line for the current day.
+
+**Response Format**:
+```json
+{
+  "success": true,
+  "entries": [
+    {
+      "downtime_id": 123,
+      "line_id": 5,
+      "category_name": "Mechanical Issue",
+      "start_time_str": "08:30",
+      "end_time_str": "09:15",
+      "duration_minutes": 45,
+      "crew_size": 3,
+      "entered_by": "jsmith",
+      "is_own_entry": true,
+      "shift_name": "Morning Shift",
+      "reason_notes": "Conveyor belt adjustment"
+    }
+  ]
+}
+```
+
+**Key Fields**:
+- `entered_by`: Username of the person who created the entry
+- `is_own_entry`: Boolean indicating if current user can edit/delete this entry
+
+## Future Roadmap Additions
+
+### Planned for v1.4.0
+Based on the collaborative viewing success, planned enhancements include:
+
+- **Entry Notifications**: Alert when someone adds entry to your line
+- **Shift Summary**: Automatic shift report generation with all entries
+- **Entry Templates**: Save common downtime scenarios for quick entry
+- **Bulk Entry**: Submit multiple downtimes at once
+- **Mobile App**: Progressive Web App for better mobile experience
+
+### Long-term Vision
+- **Cross-Facility Views**: See downtimes across multiple facilities
+- **Predictive Analytics**: ML-based downtime prediction
+- **Integration APIs**: Connect with MES/ERP systems
+- **Real-time Dashboards**: WebSocket-based live updates
+
+---
+*End of v1.3.5 Update Documentation*
+```
+
+This new section provides comprehensive documentation of the recent changes and can be appended directly to your existing README. It includes:
+
+1. **Clear problem/solution descriptions** for the fixes
+2. **Step-by-step migration guide** for upgrading
+3. **Usage instructions** for the new features
+4. **Troubleshooting section** for common issues
+5. **Performance and security considerations**
+6. **API documentation** for the modified endpoints
+7. **Future roadmap** based on the collaborative features
+
+The documentation maintains the same professional style and structure as your original README while adding valuable information about the latest improvements.

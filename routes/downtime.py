@@ -214,16 +214,17 @@ def get_subcategories(parent_id):
                          for c in subcategories]
     })
 
+# In routes/downtime.py, find the get_today_entries function and replace it with:
+
 @downtime_bp.route('/downtime/api/today-entries/<int:line_id>')
 @validate_session
 def get_today_entries(line_id):
-    """Get user's entries for a specific line today"""
+    """Get ALL entries for a specific line today (from all users)"""
     if not require_login(session):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     
-    entries = downtimes_db.get_user_entries_for_line_today(
-        session['user']['username'], line_id
-    )
+    # Get ALL entries for this line today (not just current user's)
+    entries = downtimes_db.get_all_entries_for_line_today(line_id)
     
     # Format for display
     for entry in entries:
@@ -231,6 +232,8 @@ def get_today_entries(line_id):
         entry['end_time_str'] = entry['end_time'].strftime('%H:%M')
         entry['start_time_formatted'] = entry['start_time'].strftime('%Y-%m-%dT%H:%M')
         entry['end_time_formatted'] = entry['end_time'].strftime('%Y-%m-%dT%H:%M')
+        # Mark if this entry belongs to current user
+        entry['is_own_entry'] = (entry['entered_by'] == session['user']['username'])
     
     return jsonify({
         'success': True,

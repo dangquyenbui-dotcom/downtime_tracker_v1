@@ -375,6 +375,31 @@
         margin-top: 10px;
     }
     
+    /* Add this to the <style> section */
+.entry-card.other-user {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-secondary);
+    opacity: 0.95;
+}
+
+.entry-card.other-user:hover {
+    opacity: 1;
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.entry-user {
+    background: var(--bg-tertiary);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
     .btn-edit-entry, .btn-delete-entry {
         padding: 6px 12px;
         font-size: 12px;
@@ -719,7 +744,7 @@
     <!-- Today's Entries for This Line -->
     <div id="todayEntries" class="today-entries" style="display: none;">
         <div class="entries-header">
-            <h3>📋 Today's Entries for This Line</h3>
+            <h3>📋 All Today's Entries for This Line</h3>
             <span class="entries-count" id="entriesCount">0 entries</span>
         </div>
         <div class="entries-list" id="entriesList">
@@ -865,63 +890,74 @@
     }
     
     // Display today's entries
-    function displayTodayEntries(entries) {
-        const container = document.getElementById('todayEntries');
-        const list = document.getElementById('entriesList');
-        const count = document.getElementById('entriesCount');
+    // In templates/downtime/entry.html, find the displayTodayEntries function and replace it with:
+
+function displayTodayEntries(entries) {
+    const container = document.getElementById('todayEntries');
+    const list = document.getElementById('entriesList');
+    const count = document.getElementById('entriesCount');
+    
+    if (entries.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    count.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+    
+    let html = '';
+    entries.forEach(entry => {
+        const isEditing = currentEditId === entry.downtime_id;
+        const isOwnEntry = entry.is_own_entry;
         
-        if (entries.length === 0) {
-            container.style.display = 'none';
-            return;
-        }
-        
-        container.style.display = 'block';
-        count.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
-        
-        let html = '';
-        entries.forEach(entry => {
-            const isEditing = currentEditId === entry.downtime_id;
-            html += `
-                <div class="entry-card ${isEditing ? 'editing' : ''}" id="entry-${entry.downtime_id}">
-                    ${isEditing ? '<div class="editing-badge">Editing</div>' : ''}
+        html += `
+            <div class="entry-card ${isEditing ? 'editing' : ''} ${!isOwnEntry ? 'other-user' : ''}" id="entry-${entry.downtime_id}">
+                ${isEditing ? '<div class="editing-badge">Editing</div>' : ''}
+                <div class="entry-header">
                     <div class="entry-time">
                         🕐 ${entry.start_time_str} - ${entry.end_time_str} 
                         <span style="color: var(--text-tertiary);">(${entry.duration_minutes} min)</span>
                     </div>
-                    <div class="entry-details">
-                        <div class="entry-detail">
-                            <span class="entry-label">Category:</span>
-                            <span class="entry-value">${entry.category_name}</span>
-                        </div>
-                        <div class="entry-detail">
-                            <span class="entry-label">Crew:</span>
-                            <span class="entry-value">${entry.crew_size || 1} associates</span>
-                        </div>
-                        <div class="entry-detail">
-                            <span class="entry-label">Shift:</span>
-                            <span class="entry-value">${entry.shift_name || 'Not specified'}</span>
-                        </div>
-                        ${entry.reason_notes ? `
-                        <div class="entry-detail" style="grid-column: span 2;">
-                            <span class="entry-label">Notes:</span>
-                            <span class="entry-value">${entry.reason_notes}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                    <div class="entry-actions">
-                        <button class="btn-edit-entry" onclick="editEntry(${entry.downtime_id})">
-                            ✏️ Edit
-                        </button>
-                        <button class="btn-delete-entry" onclick="deleteEntry(${entry.downtime_id})">
-                            🗑️ Delete
-                        </button>
+                    <div class="entry-user" style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                        👤 ${entry.entered_by}
                     </div>
                 </div>
-            `;
-        });
-        
-        list.innerHTML = html;
-    }
+                <div class="entry-details">
+                    <div class="entry-detail">
+                        <span class="entry-label">Category:</span>
+                        <span class="entry-value">${entry.category_name}</span>
+                    </div>
+                    <div class="entry-detail">
+                        <span class="entry-label">Crew:</span>
+                        <span class="entry-value">${entry.crew_size || 1} associates</span>
+                    </div>
+                    <div class="entry-detail">
+                        <span class="entry-label">Shift:</span>
+                        <span class="entry-value">${entry.shift_name || 'Not specified'}</span>
+                    </div>
+                    ${entry.reason_notes ? `
+                    <div class="entry-detail" style="grid-column: span 2;">
+                        <span class="entry-label">Notes:</span>
+                        <span class="entry-value">${entry.reason_notes}</span>
+                    </div>
+                    ` : ''}
+                </div>
+                ${isOwnEntry ? `
+                <div class="entry-actions">
+                    <button class="btn-edit-entry" onclick="editEntry(${entry.downtime_id})">
+                        ✏️ Edit
+                    </button>
+                    <button class="btn-delete-entry" onclick="deleteEntry(${entry.downtime_id})">
+                        🗑️ Delete
+                    </button>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+}
     
     // Edit entry
     function editEntry(downtimeId) {
