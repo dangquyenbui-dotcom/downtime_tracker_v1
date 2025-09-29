@@ -1,7 +1,7 @@
-# database/downtimes.py - Updated version with crew_size field
+# database/downtimes.py - Complete file with edit functionality
 
 """
-Downtimes database operations - UPDATED WITH CREW SIZE
+Downtimes database operations - COMPLETE WITH EDIT/DELETE
 Enhanced for production downtime tracking
 """
 
@@ -43,7 +43,9 @@ class DowntimesDB:
                 SELECT d.*, 
                        pl.line_name,
                        f.facility_name,
+                       f.facility_id,
                        dc.category_name,
+                       dc.parent_id,
                        s.shift_name
                 FROM Downtimes d
                 INNER JOIN ProductionLines pl ON d.line_id = pl.line_id
@@ -86,7 +88,7 @@ class DowntimesDB:
             if crew_size < 1 or crew_size > 10:
                 return False, "Crew size must be between 1 and 10", None
             
-            # Calculate duration
+            # Calculate duration for validation only (not inserted)
             try:
                 if isinstance(data['start_time'], str):
                     start = datetime.fromisoformat(data['start_time'])
@@ -114,14 +116,14 @@ class DowntimesDB:
                 shift_id = self._detect_shift(start)
                 data['shift_id'] = shift_id
             
-            # Insert into database
+            # Insert into database WITHOUT duration_minutes (it's computed)
             insert_query = """
                 INSERT INTO Downtimes (
                     line_id, category_id, shift_id,
-                    start_time, end_time, duration_minutes,
+                    start_time, end_time,
                     crew_size, reason_notes, entered_by, entered_date,
                     created_by, created_date, is_deleted
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, GETDATE(), 0)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?, GETDATE(), 0)
             """
             
             params = (
@@ -130,7 +132,6 @@ class DowntimesDB:
                 data.get('shift_id'),
                 start,
                 end,
-                duration_minutes,
                 crew_size,
                 data.get('reason_notes', ''),
                 data['entered_by'],
@@ -152,6 +153,112 @@ class DowntimesDB:
                 return True, f"Downtime entry created ({duration_minutes} minutes)", downtime_id
             
             return False, "Failed to create downtime entry", None
+    
+    def update(self, downtime_id, data, username):
+        """
+        Update an existing downtime entry
+        
+        Args:
+            downtime_id: ID of the downtime entry to update
+            data: dict with updated fields
+            username: user making the update
+        
+        Returns:
+            tuple: (success, message)
+        """
+        with self.db.get_connection() as conn:
+            # Get current record
+            current = self.get_by_id(downtime_id)
+            if not current:
+                return False, "Downtime entry not found"
+            
+            # Check if user owns this entry or is admin
+            if current['entered_by'] != username:
+                # Could add admin check here if needed
+                return False, "You can only edit your own entries"
+            
+            # Validate times
+            try:
+                if isinstance(data['start_time'], str):
+                    start = datetime.fromisoformat(data['start_time'])
+                else:
+                    start = data['start_time']
+                
+                if isinstance(data['end_time'], str):
+                    end = datetime.fromisoformat(data['end_time'])
+                else:
+                    end = data['end_time']
+                
+                duration_minutes = int((end - start).total_seconds() / 60)
+                
+                if duration_minutes <= 0:
+                    return False, "End time must be after start time"
+                
+                if duration_minutes > 1440:
+                    return False, "Downtime duration cannot exceed 24 hours"
+                    
+            except (ValueError, TypeError) as e:
+                return False, f"Invalid datetime format: {str(e)}"
+            
+            # Build update query (excluding computed columns)
+            update_query = """
+                UPDATE Downtimes 
+                SET line_id = ?,
+                    category_id = ?,
+                    shift_id = ?,
+                    start_time = ?,
+                    end_time = ?,
+                    crew_size = ?,
+                    reason_notes = ?,
+                    modified_by = ?,
+                    modified_date = GETDATE()
+                WHERE downtime_id = ?
+            """
+            
+            params = (
+                data.get('line_id', current['line_id']),
+                data.get('category_id', current['category_id']),
+                data.get('shift_id', current['shift_id']),
+                start,
+                end,
+                data.get('crew_size', current.get('crew_size', 1)),
+                data.get('reason_notes', current.get('reason_notes', '')),
+                username,
+                downtime_id
+            )
+            
+            success = conn.execute_query(update_query, params)
+            
+            if success:
+                return True, f"Downtime entry updated ({duration_minutes} minutes)"
+            
+            return False, "Failed to update downtime entry"
+    
+    def delete(self, downtime_id, username):
+        """Soft delete a downtime entry"""
+        with self.db.get_connection() as conn:
+            # Check ownership
+            current = self.get_by_id(downtime_id)
+            if not current:
+                return False, "Downtime entry not found"
+            
+            if current['entered_by'] != username:
+                return False, "You can only delete your own entries"
+            
+            query = """
+                UPDATE Downtimes 
+                SET is_deleted = 1,
+                    modified_by = ?,
+                    modified_date = GETDATE()
+                WHERE downtime_id = ?
+            """
+            
+            success = conn.execute_query(query, (username, downtime_id))
+            
+            if success:
+                return True, "Downtime entry deleted"
+            
+            return False, "Failed to delete downtime entry"
     
     def _detect_shift(self, timestamp):
         """Auto-detect shift based on timestamp"""
@@ -230,3 +337,37 @@ class DowntimesDB:
             base_query += " ORDER BY d.start_time DESC"
             
             return conn.execute_query(base_query, params)
+    
+    def get_user_entries_for_line_today(self, username, line_id):
+        """Get user's entries for a specific line today"""
+        with self.db.get_connection() as conn:
+            query = """
+                SELECT 
+                    d.downtime_id,
+                    d.line_id,
+                    d.category_id,
+                    d.start_time,
+                    d.end_time,
+                    d.duration_minutes,
+                    d.crew_size,
+                    d.reason_notes,
+                    d.shift_id,
+                    pl.line_name,
+                    f.facility_name,
+                    f.facility_id,
+                    dc.category_name,
+                    dc.parent_id,
+                    s.shift_name
+                FROM Downtimes d
+                INNER JOIN ProductionLines pl ON d.line_id = pl.line_id
+                INNER JOIN Facilities f ON pl.facility_id = f.facility_id
+                INNER JOIN DowntimeCategories dc ON d.category_id = dc.category_id
+                LEFT JOIN Shifts s ON d.shift_id = s.shift_id
+                WHERE d.entered_by = ?
+                AND d.line_id = ?
+                AND CAST(d.start_time AS DATE) = CAST(GETDATE() AS DATE)
+                AND d.is_deleted = 0
+                ORDER BY d.start_time DESC
+            """
+            
+            return conn.execute_query(query, (username, line_id))

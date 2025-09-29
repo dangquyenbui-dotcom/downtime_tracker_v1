@@ -1,4 +1,4 @@
-<!-- templates/downtime/entry.html - iPad Pro Optimized (No Scroll) -->
+<!-- templates/downtime/entry.html - Complete with edit functionality -->
 {% extends "base.html" %}
 
 {% block title %}Report Downtime - Production Tracker{% endblock %}
@@ -39,8 +39,8 @@
         margin: 0 !important;
         padding: 0 !important;
         max-width: 100% !important;
-        height: calc(100vh - 40px); /* Minus navbar height */
-        overflow: hidden;
+        height: calc(100vh - 40px);
+        overflow-y: auto;
     }
     
     .downtime-container {
@@ -88,17 +88,15 @@
         color: var(--accent-blue);
     }
     
-    /* Form container - flex grow to fill space */
+    /* Form container */
     .entry-form {
         background: var(--bg-secondary);
         border-radius: 10px;
         padding: 15px 20px;
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-primary);
-        flex: 1;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
     }
     
     .form-header {
@@ -115,8 +113,6 @@
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         gap: 20px;
-        flex: 1;
-        overflow-y: auto;
         padding-right: 5px;
     }
     
@@ -236,7 +232,7 @@
         resize: vertical;
     }
     
-    /* Action buttons - fixed at bottom */
+    /* Action buttons */
     .form-actions {
         display: flex;
         gap: 15px;
@@ -268,6 +264,10 @@
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
     
+    .btn-submit.editing {
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    }
+    
     .btn-reset {
         background: var(--btn-secondary-bg);
         color: var(--btn-secondary-text);
@@ -283,7 +283,147 @@
         cursor: not-allowed;
     }
     
-    /* Success modal - compact */
+    /* Today's Entries Section */
+    .today-entries {
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 10px;
+        box-shadow: var(--shadow-md);
+        border: 2px solid var(--accent-blue);
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .entries-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .entries-header h3 {
+        font-size: 16px;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .entries-count {
+        background: var(--accent-blue);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .entry-card {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-primary);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        position: relative;
+        transition: all 0.3s;
+    }
+    
+    .entry-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .entry-card.editing {
+        border-color: var(--accent-orange);
+        box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.2);
+    }
+    
+    .entry-time {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent-blue);
+        margin-bottom: 5px;
+    }
+    
+    .entry-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+    
+    .entry-detail {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .entry-label {
+        color: var(--text-tertiary);
+        font-size: 11px;
+    }
+    
+    .entry-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .entry-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .btn-edit-entry, .btn-delete-entry {
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+    }
+    
+    .btn-edit-entry {
+        background: var(--accent-blue);
+        color: white;
+    }
+    
+    .btn-edit-entry:hover {
+        background: #5569d4;
+    }
+    
+    .btn-delete-entry {
+        background: transparent;
+        color: var(--accent-red);
+        border: 1px solid var(--accent-red);
+    }
+    
+    .btn-delete-entry:hover {
+        background: var(--accent-red);
+        color: white;
+    }
+    
+    .editing-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--accent-orange);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    /* Success modal */
     .success-modal {
         display: none;
         position: fixed;
@@ -349,6 +489,24 @@
         display: inline-block;
     }
     
+    /* Quick note buttons */
+    .quick-note {
+        padding: 5px 10px;
+        font-size: 12px;
+        border: 1px solid var(--border-primary);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .quick-note:hover {
+        background: var(--accent-blue);
+        color: white;
+        border-color: var(--accent-blue);
+    }
+    
     /* Portrait orientation adjustments */
     @media (orientation: portrait) {
         .form-content {
@@ -397,25 +555,6 @@
             font-size: 15px;
         }
     }
-    
-    /* Hide scrollbar but keep scrollable */
-    .form-content::-webkit-scrollbar {
-        width: 4px;
-    }
-    
-    .form-content::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    
-    .form-content::-webkit-scrollbar-thumb {
-        background: var(--border-primary);
-        border-radius: 4px;
-    }
-    
-    /* Recent entries - remove if no space */
-    .recent-section {
-        display: none; /* Hidden for space */
-    }
 </style>
 {% endblock %}
 
@@ -445,7 +584,8 @@
 
     <!-- Main Form -->
     <form id="downtimeForm" class="entry-form">
-        <div class="form-header">Report Production Downtime</div>
+        <div class="form-header" id="formHeader">Report Production Downtime</div>
+        <input type="hidden" id="downtime_id" name="downtime_id" value="">
         
         <div class="form-content">
             <!-- Column 1: Location -->
@@ -466,7 +606,7 @@
                     <label class="form-label">
                         Production Line <span class="required">*</span>
                     </label>
-                    <select id="line_id" name="line_id" class="form-select" required disabled>
+                    <select id="line_id" name="line_id" class="form-select" required disabled onchange="handleLineChange()">
                         <option value="">Select Facility First</option>
                     </select>
                 </div>
@@ -502,8 +642,8 @@
                         Time Range <span class="required">*</span>
                     </label>
                     <div class="time-group">
-                        <input type="datetime-local" id="start_time" name="start_time" class="form-control" required>
-                        <input type="datetime-local" id="end_time" name="end_time" class="form-control" required>
+                        <input type="datetime-local" id="start_time" name="start_time" class="form-control" required onchange="updateDuration()">
+                        <input type="datetime-local" id="end_time" name="end_time" class="form-control" required onchange="updateDuration()">
                     </div>
                 </div>
                 
@@ -564,7 +704,7 @@
             </div>
         </div>
         
-        <!-- Form Actions - Always visible -->
+        <!-- Form Actions -->
         <div class="form-actions">
             <button type="button" class="btn-large btn-reset" onclick="resetForm()">
                 Clear
@@ -575,6 +715,17 @@
             </button>
         </div>
     </form>
+
+    <!-- Today's Entries for This Line -->
+    <div id="todayEntries" class="today-entries" style="display: none;">
+        <div class="entries-header">
+            <h3>📋 Today's Entries for This Line</h3>
+            <span class="entries-count" id="entriesCount">0 entries</span>
+        </div>
+        <div class="entries-list" id="entriesList">
+            <!-- Entries will be loaded here -->
+        </div>
+    </div>
 </div>
 
 <!-- Success Modal -->
@@ -591,30 +742,13 @@
     </div>
 </div>
 
-<style>
-    /* Quick note buttons */
-    .quick-note {
-        padding: 5px 10px;
-        font-size: 12px;
-        border: 1px solid var(--border-primary);
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .quick-note:hover {
-        background: var(--accent-blue);
-        color: white;
-        border-color: var(--accent-blue);
-    }
-</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Update current date/time - more compact format
+    let currentEditId = null;
+    
+    // Update current date/time
     function updateDateTime() {
         const now = new Date();
         const options = { 
@@ -626,7 +760,6 @@
         document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-US', options);
     }
     
-    // Update every second
     setInterval(updateDateTime, 1000);
     updateDateTime();
     
@@ -660,16 +793,11 @@
         }
     }
     
-    // Add event listeners for time changes
-    document.getElementById('start_time').addEventListener('change', updateDuration);
-    document.getElementById('end_time').addEventListener('change', updateDuration);
-    
-    // Set default times (current time for end, 30 minutes ago for start)
+    // Set default times on page load
     window.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
         const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60000);
         
-        // Format for datetime-local input
         const formatDateTime = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -692,10 +820,10 @@
         if (!facilityId) {
             lineSelect.innerHTML = '<option value="">Select Facility First</option>';
             lineSelect.disabled = true;
+            document.getElementById('todayEntries').style.display = 'none';
             return;
         }
         
-        // Fetch lines for selected facility
         fetch(`/downtime/api/lines/${facilityId}`)
             .then(response => response.json())
             .then(data => {
@@ -712,7 +840,201 @@
             });
     }
     
-    // Load subcategories based on main category
+    // Handle line change
+    function handleLineChange() {
+        const lineId = document.getElementById('line_id').value;
+        if (lineId) {
+            loadTodayEntries(lineId);
+        } else {
+            document.getElementById('todayEntries').style.display = 'none';
+        }
+    }
+    
+    // Load today's entries for the selected line
+    function loadTodayEntries(lineId) {
+        fetch(`/downtime/api/today-entries/${lineId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayTodayEntries(data.entries);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading entries:', error);
+            });
+    }
+    
+    // Display today's entries
+    function displayTodayEntries(entries) {
+        const container = document.getElementById('todayEntries');
+        const list = document.getElementById('entriesList');
+        const count = document.getElementById('entriesCount');
+        
+        if (entries.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        container.style.display = 'block';
+        count.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+        
+        let html = '';
+        entries.forEach(entry => {
+            const isEditing = currentEditId === entry.downtime_id;
+            html += `
+                <div class="entry-card ${isEditing ? 'editing' : ''}" id="entry-${entry.downtime_id}">
+                    ${isEditing ? '<div class="editing-badge">Editing</div>' : ''}
+                    <div class="entry-time">
+                        🕐 ${entry.start_time_str} - ${entry.end_time_str} 
+                        <span style="color: var(--text-tertiary);">(${entry.duration_minutes} min)</span>
+                    </div>
+                    <div class="entry-details">
+                        <div class="entry-detail">
+                            <span class="entry-label">Category:</span>
+                            <span class="entry-value">${entry.category_name}</span>
+                        </div>
+                        <div class="entry-detail">
+                            <span class="entry-label">Crew:</span>
+                            <span class="entry-value">${entry.crew_size || 1} associates</span>
+                        </div>
+                        <div class="entry-detail">
+                            <span class="entry-label">Shift:</span>
+                            <span class="entry-value">${entry.shift_name || 'Not specified'}</span>
+                        </div>
+                        ${entry.reason_notes ? `
+                        <div class="entry-detail" style="grid-column: span 2;">
+                            <span class="entry-label">Notes:</span>
+                            <span class="entry-value">${entry.reason_notes}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="entry-actions">
+                        <button class="btn-edit-entry" onclick="editEntry(${entry.downtime_id})">
+                            ✏️ Edit
+                        </button>
+                        <button class="btn-delete-entry" onclick="deleteEntry(${entry.downtime_id})">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        list.innerHTML = html;
+    }
+    
+    // Edit entry
+    function editEntry(downtimeId) {
+        fetch(`/downtime/get/${downtimeId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const entry = data.entry;
+                    currentEditId = downtimeId;
+                    
+                    // Update form header
+                    document.getElementById('formHeader').textContent = 'Edit Downtime Entry';
+                    document.getElementById('downtime_id').value = downtimeId;
+                    
+                    // Fill the form
+                    document.getElementById('facility_id').value = entry.facility_id;
+                    
+                    // Load lines for the facility
+                    loadProductionLines();
+                    
+                    setTimeout(() => {
+                        document.getElementById('line_id').value = entry.line_id;
+                        document.getElementById('start_time').value = entry.start_time_formatted;
+                        document.getElementById('end_time').value = entry.end_time_formatted;
+                        document.getElementById('crew_size').value = entry.crew_size || 1;
+                        document.getElementById('shift_id').value = entry.shift_id || '';
+                        document.getElementById('comments').value = entry.reason_notes || '';
+                        
+                        // Handle categories
+                        const mainCategoryId = entry.parent_id || entry.category_id;
+                        document.getElementById('main_category').value = mainCategoryId;
+                        loadSubcategories();
+                        
+                        setTimeout(() => {
+                            document.getElementById('category_id').value = entry.category_id;
+                        }, 100);
+                        
+                        updateDuration();
+                        
+                        // Update button
+                        const submitBtn = document.getElementById('submitBtn');
+                        submitBtn.innerHTML = 'Update Entry <span class="spinner"></span>';
+                        submitBtn.classList.add('editing');
+                        
+                        // Scroll to form
+                        document.querySelector('.entry-form').scrollIntoView({ behavior: 'smooth' });
+                        
+                        // Reload entries to show editing badge
+                        loadTodayEntries(entry.line_id);
+                    }, 200);
+                } else {
+                    alert(data.message || 'Error loading entry');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading entry for editing');
+            });
+    }
+    
+    // Delete entry
+    function deleteEntry(downtimeId) {
+        if (!confirm('Are you sure you want to delete this entry?')) {
+            return;
+        }
+        
+        fetch(`/downtime/delete/${downtimeId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const lineId = document.getElementById('line_id').value;
+                if (lineId) {
+                    loadTodayEntries(lineId);
+                }
+                
+                // Show success message
+                showNotification('Entry deleted successfully', 'success');
+            } else {
+                alert(data.message || 'Error deleting entry');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting entry');
+        });
+    }
+    
+    // Show notification
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 9999;
+            padding: 15px 20px;
+            background: ${type === 'success' ? 'var(--accent-green)' : 'var(--accent-red)'};
+            color: white;
+            border-radius: 8px;
+            animation: slideInRight 0.3s ease;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    // Load subcategories
     function loadSubcategories() {
         const mainCategoryId = document.getElementById('main_category').value;
         const subSelect = document.getElementById('category_id');
@@ -725,7 +1047,6 @@
         
         subSelect.innerHTML = '<option value="">Select Sub</option>';
         
-        // Find subcategories in the template data
         {% for category in categories %}
             {% if category.subcategories %}
                 if ('{{ category.category_id }}' === mainCategoryId) {
@@ -736,7 +1057,6 @@
             {% endif %}
         {% endfor %}
         
-        // If no subcategories, use the main category
         if (subSelect.options.length === 1) {
             subSelect.innerHTML = `<option value="${mainCategoryId}">Use Main Category</option>`;
         }
@@ -756,7 +1076,7 @@
         input.value = value;
     }
     
-    // Add quick note to comments
+    // Add quick note
     function addQuickNote(note) {
         const comments = document.getElementById('comments');
         if (comments.value) {
@@ -766,37 +1086,46 @@
         }
     }
     
-    // Validate crew input
-    document.getElementById('crew_size').addEventListener('input', function() {
-        let value = parseInt(this.value) || 1;
-        if (value < 1) this.value = 1;
-        if (value > 10) this.value = 10;
-    });
-    
     // Reset form
     function resetForm() {
-        if (confirm('Clear all entered data?')) {
-            document.getElementById('downtimeForm').reset();
-            document.getElementById('line_id').disabled = true;
-            document.getElementById('category_id').disabled = true;
-            
-            // Reset datetime fields to defaults
-            const now = new Date();
-            const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60000);
-            const formatDateTime = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                return `${year}-${month}-${day}T${hours}:${minutes}`;
-            };
-            
-            document.getElementById('start_time').value = formatDateTime(thirtyMinutesAgo);
-            document.getElementById('end_time').value = formatDateTime(now);
-            document.getElementById('crew_size').value = 2;
-            updateDuration();
+        if (currentEditId && !confirm('Cancel editing and clear form?')) {
+            return;
         }
+        if (!currentEditId && !confirm('Clear all entered data?')) {
+            return;
+        }
+        
+        currentEditId = null;
+        document.getElementById('downtimeForm').reset();
+        document.getElementById('downtime_id').value = '';
+        document.getElementById('line_id').disabled = true;
+        document.getElementById('category_id').disabled = true;
+        
+        // Reset header and button
+        document.getElementById('formHeader').textContent = 'Report Production Downtime';
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerHTML = 'Submit Downtime <span class="spinner"></span>';
+        submitBtn.classList.remove('editing');
+        
+        // Reset times
+        const now = new Date();
+        const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60000);
+        const formatDateTime = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+        
+        document.getElementById('start_time').value = formatDateTime(thirtyMinutesAgo);
+        document.getElementById('end_time').value = formatDateTime(now);
+        document.getElementById('crew_size').value = 2;
+        updateDuration();
+        
+        // Hide entries
+        document.getElementById('todayEntries').style.display = 'none';
     }
     
     // Form submission
@@ -818,15 +1147,14 @@
             return;
         }
         
-        // Show loading state
+        // Show loading
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.classList.add('loading');
         submitBtn.disabled = true;
         
-        // Prepare form data
+        // Submit
         const formData = new FormData(this);
         
-        // Submit via AJAX
         fetch('/downtime/submit', {
             method: 'POST',
             body: formData
@@ -837,13 +1165,19 @@
             submitBtn.disabled = false;
             
             if (data.success) {
-                // Show success modal with entry number
+                // Update success modal message
+                const message = data.action === 'UPDATE' ? 'Entry Updated!' : 'Downtime Reported!';
+                document.querySelector('.success-message').textContent = message;
                 document.getElementById('entryNumber').textContent = data.downtime_id || '';
                 document.getElementById('successModal').style.display = 'block';
                 
-                // Reset form after short delay
+                // Reset and reload
                 setTimeout(() => {
                     resetForm();
+                    const lineId = document.getElementById('line_id').value;
+                    if (lineId) {
+                        loadTodayEntries(lineId);
+                    }
                 }, 500);
             } else {
                 alert(data.message || 'Error submitting downtime');
@@ -861,5 +1195,32 @@
     function closeSuccessModal() {
         document.getElementById('successModal').style.display = 'none';
     }
+    
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 </script>
 {% endblock %}

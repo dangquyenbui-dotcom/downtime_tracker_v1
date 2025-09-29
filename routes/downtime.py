@@ -1,14 +1,14 @@
-# routes/downtime.py - Complete implementation
+# routes/downtime.py - Complete file with edit functionality
 
 """
-Downtime entry routes - FULL IMPLEMENTATION
+Downtime entry routes - COMPLETE WITH EDIT/DELETE
 iPad-optimized interface for production floor use
 """
 
 from flask import Blueprint, render_template, redirect, url_for, session, flash, jsonify, request
 from auth import require_login
 from routes.main import validate_session
-from database import facilities_db, lines_db, categories_db, downtimes_db, shifts_db
+from database import facilities_db, lines_db, categories_db, downtimes_db, shifts_db, audit_db
 from utils import get_client_info
 from datetime import datetime
 
@@ -46,28 +46,24 @@ def entry_form():
                 current_shift = shift
                 break
     
-    # Get recent entries by this user for reference
-    recent_entries = downtimes_db.get_recent(days=1, limit=5)
-    user_recent = [e for e in recent_entries if e['entered_by'] == session['user']['username']]
-    
     return render_template('downtime/entry.html',
                          facilities=facilities,
                          lines=lines,
                          categories=categories,
                          shifts=shifts,
                          current_shift=current_shift,
-                         recent_entries=user_recent[:3],
                          user=session['user'])
 
 @downtime_bp.route('/downtime/submit', methods=['POST'])
 @validate_session
 def submit_downtime():
-    """Submit a new downtime entry"""
+    """Submit a new downtime entry or update existing"""
     if not require_login(session):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     
     try:
         # Get form data
+        downtime_id = request.form.get('downtime_id')  # For updates
         facility_id = request.form.get('facility_id')
         line_id = request.form.get('line_id')
         category_id = request.form.get('category_id')
@@ -89,7 +85,7 @@ def submit_downtime():
         except ValueError:
             return jsonify({'success': False, 'message': 'Crew size must be a number'})
         
-        # Create downtime entry
+        # Data for create/update
         data = {
             'line_id': line_id,
             'category_id': category_id,
@@ -101,26 +97,35 @@ def submit_downtime():
             'entered_by': session['user']['username']
         }
         
-        success, message, downtime_id = downtimes_db.create(data)
+        if downtime_id:
+            # Update existing entry
+            success, message = downtimes_db.update(
+                downtime_id, data, session['user']['username']
+            )
+            action = 'UPDATE'
+        else:
+            # Create new entry
+            success, message, downtime_id = downtimes_db.create(data)
+            action = 'INSERT'
         
         if success:
             # Log in audit
-            from database import audit_db
             ip, user_agent = get_client_info()
             audit_db.log(
                 table_name='Downtimes',
                 record_id=downtime_id,
-                action_type='INSERT',
+                action_type=action,
                 username=session['user']['username'],
                 ip=ip,
                 user_agent=user_agent,
-                notes=f"Downtime reported for line {line_id}"
+                notes=f"Downtime {'updated' if action == 'UPDATE' else 'reported'} for line {line_id}"
             )
             
             return jsonify({
                 'success': True,
-                'message': 'Downtime entry submitted successfully!',
-                'downtime_id': downtime_id
+                'message': message,
+                'downtime_id': downtime_id,
+                'action': action
             })
         else:
             return jsonify({'success': False, 'message': message})
@@ -128,6 +133,57 @@ def submit_downtime():
     except Exception as e:
         print(f"Error submitting downtime: {str(e)}")
         return jsonify({'success': False, 'message': 'An error occurred while submitting'})
+
+@downtime_bp.route('/downtime/get/<int:downtime_id>')
+@validate_session
+def get_downtime(downtime_id):
+    """Get a specific downtime entry for editing"""
+    if not require_login(session):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    entry = downtimes_db.get_by_id(downtime_id)
+    
+    if not entry:
+        return jsonify({'success': False, 'message': 'Entry not found'})
+    
+    # Check ownership
+    if entry['entered_by'] != session['user']['username']:
+        if not session['user'].get('is_admin'):
+            return jsonify({'success': False, 'message': 'You can only edit your own entries'})
+    
+    # Format datetime for HTML input
+    entry['start_time_formatted'] = entry['start_time'].strftime('%Y-%m-%dT%H:%M')
+    entry['end_time_formatted'] = entry['end_time'].strftime('%Y-%m-%dT%H:%M')
+    
+    return jsonify({
+        'success': True,
+        'entry': entry
+    })
+
+@downtime_bp.route('/downtime/delete/<int:downtime_id>', methods=['POST'])
+@validate_session
+def delete_downtime(downtime_id):
+    """Delete a downtime entry"""
+    if not require_login(session):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    success, message = downtimes_db.delete(
+        downtime_id, session['user']['username']
+    )
+    
+    if success:
+        # Log in audit
+        ip, user_agent = get_client_info()
+        audit_db.log(
+            table_name='Downtimes',
+            record_id=downtime_id,
+            action_type='DELETE',
+            username=session['user']['username'],
+            ip=ip,
+            user_agent=user_agent
+        )
+    
+    return jsonify({'success': success, 'message': message})
 
 @downtime_bp.route('/downtime/api/lines/<int:facility_id>')
 @validate_session
@@ -156,4 +212,27 @@ def get_subcategories(parent_id):
         'success': True,
         'subcategories': [{'id': c['category_id'], 'name': c['category_name'], 'code': c['category_code']} 
                          for c in subcategories]
+    })
+
+@downtime_bp.route('/downtime/api/today-entries/<int:line_id>')
+@validate_session
+def get_today_entries(line_id):
+    """Get user's entries for a specific line today"""
+    if not require_login(session):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    entries = downtimes_db.get_user_entries_for_line_today(
+        session['user']['username'], line_id
+    )
+    
+    # Format for display
+    for entry in entries:
+        entry['start_time_str'] = entry['start_time'].strftime('%H:%M')
+        entry['end_time_str'] = entry['end_time'].strftime('%H:%M')
+        entry['start_time_formatted'] = entry['start_time'].strftime('%Y-%m-%dT%H:%M')
+        entry['end_time_formatted'] = entry['end_time'].strftime('%Y-%m-%dT%H:%M')
+    
+    return jsonify({
+        'success': True,
+        'entries': entries
     })
