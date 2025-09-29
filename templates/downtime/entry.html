@@ -1,0 +1,865 @@
+<!-- templates/downtime/entry.html - iPad Pro Optimized (No Scroll) -->
+{% extends "base.html" %}
+
+{% block title %}Report Downtime - Production Tracker{% endblock %}
+
+{% block navbar_title %}📝 Report Downtime{% endblock %}
+
+{% block nav_links %}
+<a href="/dashboard">Dashboard</a>
+<a href="/logout">Logout</a>
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* Remove all default margins/padding */
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    
+    .navbar {
+        padding: 8px 20px !important;
+        min-height: 40px;
+        height: 40px;
+    }
+    
+    .navbar h1 {
+        font-size: 18px;
+    }
+    
+    .nav-links a {
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+    
+    /* Main container - full viewport */
+    .container {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        height: calc(100vh - 40px); /* Minus navbar height */
+        overflow: hidden;
+    }
+    
+    .downtime-container {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    /* Status bar - more compact */
+    .current-info {
+        background: var(--gradient-subtle);
+        border: 1px solid var(--accent-blue);
+        border-radius: 8px;
+        padding: 8px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+        min-height: 45px;
+        height: 45px;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .info-label {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+    }
+    
+    .info-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .info-value.time {
+        font-size: 16px;
+        color: var(--accent-blue);
+    }
+    
+    /* Form container - flex grow to fill space */
+    .entry-form {
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        padding: 15px 20px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-primary);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .form-header {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-primary);
+    }
+    
+    /* Three column layout for landscape */
+    .form-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    /* Column sections */
+    .form-column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .form-label .required {
+        color: var(--accent-red);
+        font-size: 14px;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 2px solid var(--input-border);
+        border-radius: 8px;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        height: 38px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    /* Prevent iOS zoom */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+    
+    .form-select {
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+        padding-right: 35px;
+    }
+    
+    .form-control:focus, .form-select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+    
+    /* Time inputs side by side */
+    .time-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    /* Crew size compact */
+    .crew-input-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .crew-input {
+        width: 70px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        padding: 8px;
+    }
+    
+    .crew-btn {
+        width: 35px;
+        height: 35px;
+        border: 2px solid var(--accent-blue);
+        background: var(--bg-secondary);
+        color: var(--accent-blue);
+        border-radius: 6px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .crew-btn:hover {
+        background: var(--accent-blue);
+        color: white;
+    }
+    
+    /* Comments - smaller */
+    .comments-textarea {
+        width: 100%;
+        min-height: 60px;
+        max-height: 80px;
+        padding: 8px 12px;
+        font-size: 14px;
+        font-family: inherit;
+        border: 2px solid var(--input-border);
+        border-radius: 8px;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        resize: vertical;
+    }
+    
+    /* Action buttons - fixed at bottom */
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-primary);
+        flex-shrink: 0;
+    }
+    
+    .btn-large {
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        min-width: 120px;
+    }
+    
+    .btn-submit {
+        background: var(--gradient-primary);
+        color: white;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-reset {
+        background: var(--btn-secondary-bg);
+        color: var(--btn-secondary-text);
+        border: 2px solid var(--border-secondary);
+    }
+    
+    .btn-reset:hover {
+        background: var(--btn-secondary-hover);
+    }
+    
+    .btn-large:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    /* Success modal - compact */
+    .success-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+    }
+    
+    .success-content {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 400px;
+        margin: 15% auto;
+        text-align: center;
+        animation: bounceIn 0.5s;
+    }
+    
+    @keyframes bounceIn {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .success-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .success-message {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    
+    .success-details {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    
+    /* Loading spinner */
+    .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+        margin-left: 8px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .btn-submit.loading .spinner {
+        display: inline-block;
+    }
+    
+    /* Portrait orientation adjustments */
+    @media (orientation: portrait) {
+        .form-content {
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-column.full-width {
+            grid-column: span 2;
+        }
+        
+        .comments-group {
+            grid-column: span 2;
+        }
+    }
+    
+    /* Smaller iPad (11") */
+    @media (max-height: 800px) {
+        .current-info {
+            min-height: 40px;
+            height: 40px;
+            padding: 6px 12px;
+        }
+        
+        .form-header {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            gap: 8px;
+        }
+        
+        .form-label {
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        
+        .form-control, .form-select {
+            height: 35px;
+            padding: 6px 10px;
+        }
+        
+        .btn-large {
+            padding: 10px 25px;
+            font-size: 15px;
+        }
+    }
+    
+    /* Hide scrollbar but keep scrollable */
+    .form-content::-webkit-scrollbar {
+        width: 4px;
+    }
+    
+    .form-content::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .form-content::-webkit-scrollbar-thumb {
+        background: var(--border-primary);
+        border-radius: 4px;
+    }
+    
+    /* Recent entries - remove if no space */
+    .recent-section {
+        display: none; /* Hidden for space */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="downtime-container">
+    <!-- Compact Status Bar -->
+    <div class="current-info">
+        <div class="info-item">
+            <span class="info-label">Date/Time:</span>
+            <span class="info-value time" id="currentDateTime">--</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Shift:</span>
+            <span class="info-value">
+                {% if current_shift %}
+                    {{ current_shift.shift_name }}
+                {% else %}
+                    No Active Shift
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">User:</span>
+            <span class="info-value">{{ user.display_name }}</span>
+        </div>
+    </div>
+
+    <!-- Main Form -->
+    <form id="downtimeForm" class="entry-form">
+        <div class="form-header">Report Production Downtime</div>
+        
+        <div class="form-content">
+            <!-- Column 1: Location -->
+            <div class="form-column">
+                <div class="form-group">
+                    <label class="form-label">
+                        Facility <span class="required">*</span>
+                    </label>
+                    <select id="facility_id" name="facility_id" class="form-select" required onchange="loadProductionLines()">
+                        <option value="">Select Facility</option>
+                        {% for facility in facilities %}
+                        <option value="{{ facility.facility_id }}">{{ facility.facility_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        Production Line <span class="required">*</span>
+                    </label>
+                    <select id="line_id" name="line_id" class="form-select" required disabled>
+                        <option value="">Select Facility First</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        Main Category <span class="required">*</span>
+                    </label>
+                    <select id="main_category" class="form-select" required onchange="loadSubcategories()">
+                        <option value="">Select Main</option>
+                        {% for category in categories %}
+                        <option value="{{ category.category_id }}" data-code="{{ category.category_code }}">
+                            {{ category.category_code }} - {{ category.category_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        Sub Category <span class="required">*</span>
+                    </label>
+                    <select id="category_id" name="category_id" class="form-select" required disabled>
+                        <option value="">Select Main First</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Column 2: Time & Shift -->
+            <div class="form-column">
+                <div class="form-group">
+                    <label class="form-label">
+                        Time Range <span class="required">*</span>
+                    </label>
+                    <div class="time-group">
+                        <input type="datetime-local" id="start_time" name="start_time" class="form-control" required>
+                        <input type="datetime-local" id="end_time" name="end_time" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        Associates (Crew) <span class="required">*</span>
+                    </label>
+                    <div class="crew-input-group">
+                        <button type="button" class="crew-btn" onclick="adjustCrew(-1)">−</button>
+                        <input type="number" id="crew_size" name="crew_size" class="form-control crew-input" 
+                               value="2" min="1" max="10" required>
+                        <button type="button" class="crew-btn" onclick="adjustCrew(1)">+</button>
+                        <span style="color: var(--text-tertiary); font-size: 12px;">(1-10)</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Shift</label>
+                    <select id="shift_id" name="shift_id" class="form-select">
+                        <option value="">Auto-Detect</option>
+                        {% for shift in shifts %}
+                        <option value="{{ shift.shift_id }}" 
+                                {% if current_shift and current_shift.shift_id == shift.shift_id %}selected{% endif %}>
+                            {{ shift.shift_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Duration</label>
+                    <div id="duration-display" style="padding: 8px; background: var(--bg-tertiary); border-radius: 6px; text-align: center; font-weight: 600; color: var(--accent-blue);">
+                        -- minutes
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Column 3: Comments -->
+            <div class="form-column">
+                <div class="form-group comments-group">
+                    <label class="form-label">
+                        Comments / Additional Information
+                    </label>
+                    <textarea id="comments" name="comments" class="comments-textarea" 
+                              placeholder="Enter any additional details about the downtime..." 
+                              style="min-height: 140px; max-height: 140px;"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Quick Notes</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                        <button type="button" class="quick-note" onclick="addQuickNote('Waiting for parts')">Parts</button>
+                        <button type="button" class="quick-note" onclick="addQuickNote('Waiting for maintenance')">Maintenance</button>
+                        <button type="button" class="quick-note" onclick="addQuickNote('Quality issue')">Quality</button>
+                        <button type="button" class="quick-note" onclick="addQuickNote('Changeover')">Changeover</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Form Actions - Always visible -->
+        <div class="form-actions">
+            <button type="button" class="btn-large btn-reset" onclick="resetForm()">
+                Clear
+            </button>
+            <button type="submit" class="btn-large btn-submit" id="submitBtn">
+                Submit Downtime
+                <span class="spinner"></span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal" class="success-modal">
+    <div class="success-content">
+        <div class="success-icon">✅</div>
+        <div class="success-message">Downtime Reported!</div>
+        <div class="success-details">
+            Entry #<span id="entryNumber"></span> recorded successfully
+        </div>
+        <button class="btn-large btn-submit" onclick="closeSuccessModal()">
+            Report Another
+        </button>
+    </div>
+</div>
+
+<style>
+    /* Quick note buttons */
+    .quick-note {
+        padding: 5px 10px;
+        font-size: 12px;
+        border: 1px solid var(--border-primary);
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .quick-note:hover {
+        background: var(--accent-blue);
+        color: white;
+        border-color: var(--accent-blue);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update current date/time - more compact format
+    function updateDateTime() {
+        const now = new Date();
+        const options = { 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-US', options);
+    }
+    
+    // Update every second
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+    
+    // Calculate and display duration
+    function updateDuration() {
+        const startTime = document.getElementById('start_time').value;
+        const endTime = document.getElementById('end_time').value;
+        const durationDisplay = document.getElementById('duration-display');
+        
+        if (startTime && endTime) {
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const diffMinutes = Math.round((end - start) / 60000);
+            
+            if (diffMinutes > 0) {
+                const hours = Math.floor(diffMinutes / 60);
+                const minutes = diffMinutes % 60;
+                if (hours > 0) {
+                    durationDisplay.textContent = `${hours}h ${minutes}m (${diffMinutes} min)`;
+                } else {
+                    durationDisplay.textContent = `${diffMinutes} minutes`;
+                }
+                durationDisplay.style.color = 'var(--accent-green)';
+            } else {
+                durationDisplay.textContent = 'Invalid range';
+                durationDisplay.style.color = 'var(--accent-red)';
+            }
+        } else {
+            durationDisplay.textContent = '-- minutes';
+            durationDisplay.style.color = 'var(--text-tertiary)';
+        }
+    }
+    
+    // Add event listeners for time changes
+    document.getElementById('start_time').addEventListener('change', updateDuration);
+    document.getElementById('end_time').addEventListener('change', updateDuration);
+    
+    // Set default times (current time for end, 30 minutes ago for start)
+    window.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60000);
+        
+        // Format for datetime-local input
+        const formatDateTime = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+        
+        document.getElementById('start_time').value = formatDateTime(thirtyMinutesAgo);
+        document.getElementById('end_time').value = formatDateTime(now);
+        updateDuration();
+    });
+    
+    // Load production lines based on facility
+    function loadProductionLines() {
+        const facilityId = document.getElementById('facility_id').value;
+        const lineSelect = document.getElementById('line_id');
+        
+        if (!facilityId) {
+            lineSelect.innerHTML = '<option value="">Select Facility First</option>';
+            lineSelect.disabled = true;
+            return;
+        }
+        
+        // Fetch lines for selected facility
+        fetch(`/downtime/api/lines/${facilityId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    lineSelect.innerHTML = '<option value="">Select Line</option>';
+                    data.lines.forEach(line => {
+                        lineSelect.innerHTML += `<option value="${line.id}">${line.name}</option>`;
+                    });
+                    lineSelect.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading lines:', error);
+            });
+    }
+    
+    // Load subcategories based on main category
+    function loadSubcategories() {
+        const mainCategoryId = document.getElementById('main_category').value;
+        const subSelect = document.getElementById('category_id');
+        
+        if (!mainCategoryId) {
+            subSelect.innerHTML = '<option value="">Select Main First</option>';
+            subSelect.disabled = true;
+            return;
+        }
+        
+        subSelect.innerHTML = '<option value="">Select Sub</option>';
+        
+        // Find subcategories in the template data
+        {% for category in categories %}
+            {% if category.subcategories %}
+                if ('{{ category.category_id }}' === mainCategoryId) {
+                    {% for sub in category.subcategories %}
+                    subSelect.innerHTML += `<option value="{{ sub.category_id }}">{{ sub.category_code }} - {{ sub.category_name }}</option>`;
+                    {% endfor %}
+                }
+            {% endif %}
+        {% endfor %}
+        
+        // If no subcategories, use the main category
+        if (subSelect.options.length === 1) {
+            subSelect.innerHTML = `<option value="${mainCategoryId}">Use Main Category</option>`;
+        }
+        
+        subSelect.disabled = false;
+    }
+    
+    // Adjust crew size
+    function adjustCrew(delta) {
+        const input = document.getElementById('crew_size');
+        let value = parseInt(input.value) || 1;
+        value += delta;
+        
+        if (value < 1) value = 1;
+        if (value > 10) value = 10;
+        
+        input.value = value;
+    }
+    
+    // Add quick note to comments
+    function addQuickNote(note) {
+        const comments = document.getElementById('comments');
+        if (comments.value) {
+            comments.value += '; ' + note;
+        } else {
+            comments.value = note;
+        }
+    }
+    
+    // Validate crew input
+    document.getElementById('crew_size').addEventListener('input', function() {
+        let value = parseInt(this.value) || 1;
+        if (value < 1) this.value = 1;
+        if (value > 10) this.value = 10;
+    });
+    
+    // Reset form
+    function resetForm() {
+        if (confirm('Clear all entered data?')) {
+            document.getElementById('downtimeForm').reset();
+            document.getElementById('line_id').disabled = true;
+            document.getElementById('category_id').disabled = true;
+            
+            // Reset datetime fields to defaults
+            const now = new Date();
+            const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60000);
+            const formatDateTime = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+            
+            document.getElementById('start_time').value = formatDateTime(thirtyMinutesAgo);
+            document.getElementById('end_time').value = formatDateTime(now);
+            document.getElementById('crew_size').value = 2;
+            updateDuration();
+        }
+    }
+    
+    // Form submission
+    document.getElementById('downtimeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate times
+        const startTime = new Date(document.getElementById('start_time').value);
+        const endTime = new Date(document.getElementById('end_time').value);
+        
+        if (endTime <= startTime) {
+            alert('End time must be after start time');
+            return;
+        }
+        
+        const durationMinutes = (endTime - startTime) / 60000;
+        if (durationMinutes > 1440) {
+            alert('Duration cannot exceed 24 hours');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+        
+        // Prepare form data
+        const formData = new FormData(this);
+        
+        // Submit via AJAX
+        fetch('/downtime/submit', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+            
+            if (data.success) {
+                // Show success modal with entry number
+                document.getElementById('entryNumber').textContent = data.downtime_id || '';
+                document.getElementById('successModal').style.display = 'block';
+                
+                // Reset form after short delay
+                setTimeout(() => {
+                    resetForm();
+                }, 500);
+            } else {
+                alert(data.message || 'Error submitting downtime');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error submitting. Please try again.');
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+        });
+    });
+    
+    // Close success modal
+    function closeSuccessModal() {
+        document.getElementById('successModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

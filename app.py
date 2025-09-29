@@ -1,12 +1,15 @@
+# app.py - Updated version with better network configuration
+
 """
 Downtime Tracker - Main Application
-Clean, modular structure with proper separation of concerns
+Production-ready configuration with network access
 """
 
 from flask import Flask
 import os
 from datetime import timedelta
 from config import Config
+import socket
 
 def create_app():
     """Application factory pattern"""
@@ -61,11 +64,23 @@ def initialize_database():
     else:
         print("❌ Database: Connection failed!")
         print("   Run database initialization script")
+
+def get_local_ip():
+    """Get the local IP address of the machine"""
+    try:
+        # Connect to an external server to get local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        return "127.0.0.1"
     
 def test_services():
     """Test all service connections on startup"""
     print("\n" + "="*60)
-    print("DOWNTIME TRACKER v1 - STARTUP DIAGNOSTICS")
+    print("DOWNTIME TRACKER v1.3.3 - STARTUP DIAGNOSTICS")
     print("="*60)
     
     # Test Database
@@ -93,9 +108,12 @@ if __name__ == '__main__':
     os.makedirs('static', exist_ok=True)
     os.makedirs('templates', exist_ok=True)
     
+    # Get network information
+    local_ip = get_local_ip()
+    
     # Display configuration
     print("\n" + "="*50)
-    print("DOWNTIME TRACKER v1 - CONFIGURATION")
+    print("DOWNTIME TRACKER v1.3.3 - CONFIGURATION")
     print("="*50)
     print(f"Mode: {'TEST' if Config.TEST_MODE else 'PRODUCTION'}")
     print(f"Database: {Config.DB_SERVER}/{Config.DB_NAME}")
@@ -108,7 +126,25 @@ if __name__ == '__main__':
     # Create and run app
     app = create_app()
     
-    print(f"🚀 Starting server at: http://localhost:5000")
-    print("Press CTRL+C to stop the server\n")
+    # Display access URLs
+    print("\n" + "="*60)
+    print("🚀 SERVER STARTING - ACCESS URLS:")
+    print("="*60)
+    print(f"Local:        http://localhost:5000")
+    print(f"Network:      http://{local_ip}:5000")
+    print(f"Your IP:      http://192.168.76.83:5000")
+    print("="*60)
+    print("\n📝 Make sure:")
+    print("  1. Windows Firewall allows port 5000")
+    print("  2. No antivirus blocking the connection")
+    print("  3. Network allows peer-to-peer connections")
+    print("\nPress CTRL+C to stop the server\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Run with explicit network settings
+    app.run(
+        host='0.0.0.0',  # Allow external connections
+        port=5000,
+        debug=True,
+        threaded=True,  # Handle multiple requests
+        use_reloader=True
+    )
