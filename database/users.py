@@ -58,6 +58,88 @@ class UsersDB:
                 username, display_name, email, groups_str,
                 1 if is_admin else 0, ip, user_agent
             ))
+        
+    # Add these methods to the existing UsersDB class
+
+def ensure_preferences_table(self):
+    """Ensure the UserPreferences table exists"""
+    with self.db.get_connection() as conn:
+        if not conn.check_table_exists('UserPreferences'):
+            print("Creating UserPreferences table...")
+            create_query = """
+                CREATE TABLE UserPreferences (
+                    preference_id INT IDENTITY(1,1) PRIMARY KEY,
+                    username NVARCHAR(100) NOT NULL,
+                    preference_key NVARCHAR(50) NOT NULL,
+                    preference_value NVARCHAR(500),
+                    created_date DATETIME DEFAULT GETDATE(),
+                    modified_date DATETIME DEFAULT GETDATE(),
+                    CONSTRAINT UQ_UserPref UNIQUE(username, preference_key)
+                );
+                
+                CREATE INDEX IX_UserPreferences_Username ON UserPreferences(username);
+            """
+            success = conn.execute_query(create_query)
+            if success:
+                print("✅ UserPreferences table created successfully")
+            return success
+        return True
+
+def get_user_preference(self, username, preference_key):
+    """Get a specific preference for a user"""
+    with self.db.get_connection() as conn:
+        # Ensure table exists
+        self.ensure_preferences_table()
+        
+        query = """
+            SELECT preference_value 
+            FROM UserPreferences 
+            WHERE username = ? AND preference_key = ?
+        """
+        result = conn.execute_query(query, (username, preference_key))
+        return result[0]['preference_value'] if result else None
+
+def set_user_preference(self, username, preference_key, preference_value):
+    """Set or update a user preference"""
+    with self.db.get_connection() as conn:
+        # Ensure table exists
+        self.ensure_preferences_table()
+        
+        # Use MERGE for upsert operation
+        query = """
+            MERGE UserPreferences AS target
+            USING (SELECT ? AS username, ? AS preference_key, ? AS preference_value) AS source
+            ON (target.username = source.username AND target.preference_key = source.preference_key)
+            WHEN MATCHED THEN
+                UPDATE SET preference_value = source.preference_value, 
+                          modified_date = GETDATE()
+            WHEN NOT MATCHED THEN
+                INSERT (username, preference_key, preference_value)
+                VALUES (source.username, source.preference_key, source.preference_value);
+        """
+        
+        return conn.execute_query(query, (username, preference_key, preference_value))
+
+def get_all_user_preferences(self, username):
+    """Get all preferences for a user"""
+    with self.db.get_connection() as conn:
+        # Ensure table exists
+        self.ensure_preferences_table()
+        
+        query = """
+            SELECT preference_key, preference_value, modified_date
+            FROM UserPreferences 
+            WHERE username = ?
+            ORDER BY preference_key
+        """
+        results = conn.execute_query(query, (username,))
+        
+        # Convert to dictionary
+        preferences = {}
+        for row in results:
+            preferences[row['preference_key']] = row['preference_value']
+        
+        return preferences
     
     def get_user_summary(self):
         """Get summary of all users who have logged in"""

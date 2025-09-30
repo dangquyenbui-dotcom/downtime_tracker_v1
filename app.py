@@ -4,6 +4,40 @@
 Downtime Tracker - Main Application
 Production-ready configuration with network access
 """
+# Add these imports at the top
+from i18n_config import I18nConfig, _, format_datetime_i18n, format_date_i18n
+
+def create_app():
+    """Application factory pattern"""
+    app = Flask(__name__)
+    
+    # Configuration
+    app.secret_key = Config.SECRET_KEY
+    app.permanent_session_lifetime = timedelta(hours=Config.SESSION_HOURS)
+    
+    # Configure static files path
+    app.static_folder = 'static'
+    app.static_url_path = '/static'
+    
+    # Initialize internationalization (NEW)
+    I18nConfig.init_app(app)
+    
+    # Register template filters for i18n (NEW)
+    app.jinja_env.filters['datetime_i18n'] = format_datetime_i18n
+    app.jinja_env.filters['date_i18n'] = format_date_i18n
+    
+    # Make translation function available in templates (NEW)
+    app.jinja_env.globals['_'] = _
+    app.jinja_env.globals['get_locale'] = lambda: session.get('language', 'en')
+    app.jinja_env.globals['get_languages'] = I18nConfig.get_available_languages
+    
+    # Register blueprints
+    register_blueprints(app)
+    
+    # Initialize database
+    initialize_database()
+    
+    return app
 
 from flask import Flask
 import os

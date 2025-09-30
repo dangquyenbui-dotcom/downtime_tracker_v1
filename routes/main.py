@@ -3,6 +3,23 @@ Main routes for Downtime Tracker
 Connected to database for real functionality
 WITH SINGLE SESSION ENFORCEMENT
 """
+# Add this import at the top
+from i18n_config import I18nConfig, _
+
+# Add this new route
+@main_bp.route('/switch-language/<language>')
+def switch_language(language):
+    """Switch the user interface language"""
+    if I18nConfig.switch_language(language):
+        flash(_('Language changed successfully'), 'success')
+    else:
+        flash(_('Invalid language selection'), 'error')
+    
+    # Redirect to the referrer or dashboard
+    referrer = request.referrer
+    if referrer:
+        return redirect(referrer)
+    return redirect(url_for('main.dashboard'))
 
 import os
 from flask import Blueprint, render_template, redirect, url_for, session, request, flash, jsonify

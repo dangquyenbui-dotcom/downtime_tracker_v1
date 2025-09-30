@@ -21,30 +21,34 @@
 </head>
 <body>
     <!-- Navigation Bar (optional - can be overridden) -->
-    {% block navbar %}
-    <div class="navbar">
-        <h1>{% block navbar_title %}🏭 Downtime Tracker{% endblock %}</h1>
-        <div class="nav-links">
-            {% if session.user %}
-            <div class="theme-toggle-wrapper">
-                <span class="theme-icon">☀️</span>
-                <label class="theme-toggle">
-                    <input type="checkbox" id="themeToggle">
-                    <span class="theme-toggle-slider"></span>
-                </label>
-                <span class="theme-icon">🌙</span>
-            </div>
-            {% block nav_links %}
-                {% if session.user.is_admin %}
-                <a href="/admin">Admin Panel</a>
-                {% endif %}
-                <a href="/dashboard">Dashboard</a>
-                <a href="/logout">Logout</a>
-            {% endblock %}
-            {% endif %}
+    <!-- Update the navbar section in base.html -->
+{% block navbar %}
+<div class="navbar">
+    <h1>{% block navbar_title %}🏭 {{ _('Downtime Tracker') }}{% endblock %}</h1>
+    <div class="nav-links">
+        {% if session.user %}
+        <!-- Language Selector -->
+        {% include 'components/language_selector.html' %}
+        
+        <div class="theme-toggle-wrapper">
+            <span class="theme-icon">☀️</span>
+            <label class="theme-toggle">
+                <input type="checkbox" id="themeToggle">
+                <span class="theme-toggle-slider"></span>
+            </label>
+            <span class="theme-icon">🌙</span>
         </div>
+        {% block nav_links %}
+            {% if session.user.is_admin %}
+            <a href="/admin">{{ _('Admin Panel') }}</a>
+            {% endif %}
+            <a href="/dashboard">{{ _('Dashboard') }}</a>
+            <a href="/logout">{{ _('Logout') }}</a>
+        {% endblock %}
+        {% endif %}
     </div>
-    {% endblock %}
+</div>
+{% endblock %}
     
     <!-- Main Content -->
     {% block container %}

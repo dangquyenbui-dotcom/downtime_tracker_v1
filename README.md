@@ -129,3 +129,31 @@ New-NetFirewallRule -DisplayName "Downtime Tracker" -Direction Inbound -Protocol
 
 ---
 *Optimized for manufacturing floor use with focus on simplicity, reliability, and data integrity.*
+
+# Downtime Tracker v1.4.0 - Bilingual Support Update
+
+## What's New in v1.4.0
+✅ **Dual Language Support** - Full US English and US Spanish interface
+✅ **Language Persistence** - User language preference saved to database
+✅ **Professional i18n** - Flask-Babel integration with proper localization
+✅ **Date/Time Localization** - Dates formatted per language preference
+✅ **Easy Language Switch** - Dropdown selector in navigation bar
+
+## Language Features
+- **Default Language:** US English
+- **Secondary Language:** US Spanish (Mexican Spanish dialect)
+- **Persistence:** Language preference saved per user
+- **Coverage:** All UI elements, messages, and labels translated
+- **Professional:** Industry-standard Flask-Babel implementation
+
+## Translation Setup
+```bash
+# Initial setup
+pip install -r requirements.txt
+python setup_translations.py
+
+# After adding new strings
+python setup_translations.py update
+
+# Compile translations
+pybabel compile -d translations
